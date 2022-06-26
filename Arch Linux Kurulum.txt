@@ -1,0 +1,124 @@
+﻿*********************
+loadkeys trq
+
+ls /sys/firmware/efi/efivars 
+
+Komut dizini hatasız gösteriyorsa, sistem UEFI modunda başlatılır
+*********internet bağlantısı*****************
+ip link
+iwctl
+device list
+station device scan
+station device get-networks
+station device connect SSID
+ping archlinux.org
+**********************
+timedatectl set-ntp true
+****************************
+fdisk -l
+ 
+fdisk /dev/the_disk_to_be_partitioned
+********************************************************
+/mnt/boot1	/dev/efi_system_partition	EFI system partition	At least 300 MiB
+[SWAP]		/dev/swap_partition		Linux swap		More than 512 MiB
+/mnt		/dev/root_partition		Linux x86-64 root (/)	Remainder of the device
+************************************************************************************
+m menü
+n ekleme
+p gösterir
+--------------
+mkfs.ext4 /dev/root_partition #root alanı biçimlendirmesi
+mkswap /dev/swap_partition    #swap biçimlendirme
+mkfs.fat -F 32 /dev/efi_system_partition  #efi sistemler için efi alanının biçimlendirilmesi
+---------------------------------------------
+mount /dev/root_partition /mnt
+mount /dev/efi_system_partition /mnt/boot #boot klasörü yoksa oluştur
+swapon /dev/swap_partition
+---------------------------------------------
+#gerekli temel paketler kurulacak
+
+pacstrap /mnt base linux linux-firmware vim
+
+# kurulabilecek ek paketler . pacman ilede kurulabilir chroot olduktan sonra .
+# https://gitlab.archlinux.org/archlinux/archiso/-/blob/master/configs/releng/packages.x86_64
+---------------------------------------------
+genfstab -U /mnt >> /mnt/etc/fstab
+
+arch-chroot /mnt  #chroot oluyoruz
+
+ln -sf /usr/share/zoneinfo/Region/City /etc/localtime
+
+hwclock --systohc
+
+vim /etc/locale.gen # biçimlendirme dilinin yorumu kaldırılacak
+tr_TR.UTF-8 UTF-8
+locale-gen
+---------------------------------------------
+/etc/vconsole.conf  -> içine
+KEYMAP=trq
+---------------------------------------------
+echo "LANG=en_US.UTF-8" > /etc/locale.conf
+
+echo myhostname > /etc/hostname
+
+vim /etc/hosts 
+/etc/hosts
+127.0.0.1        localhost
+::1              localhost
+127.0.1.1        myhostname
+---------------------------------------------
+mkinitcpio -P
+---------------------------------------------
+passwd #şifre oluştur
+-----------------------boot loader ----------------------
+
+pacman -S grub efibootmgr os-prober
+grub -> gerekli
+efibootmgr -> gerekli
+os-prober  -> gerekli genelde dual bootlarda
+
+# grub-install --target=x86_64-efi --bootloader-id=grub_uefi --efi-directory=/boot
+# grub-mkconfig -o /boot/grub/grub.cfg
+
+---------------------Kurulacak paket program service vs------------------------
+pacman -sS sudo networkmanager xorg lightdm lightdm-gtk-greeter
+pulseaudio xfce4  xf86-video-intel  intel-ucode xfce4-goodies 
+wireless_tools
+ 
+wpa_supplicant
+ 
+--------------------------------------------------------------------------------------
+-------------------networkmanager ------------------------------------------
+enable NetworkManager.service
+------------------lightdm ---------------------------------------------
+lightdm lightdm-gtk-greeter
+
+/etc/lightdm/lightdm.conf
+[Seat:*]
+...
+greeter-session=lightdm-yourgreeter-greeter
+...
+enable lightdm.service
+status lightdm.service
+----------------------------------------------------------------------------
+------------------------------kurulmasada oluyor------------------------------------
+
+mtools dosfstools 
+openssh linux-headers linux-lts linux-lts-headers
+----------------------------------------------------------------------------
+xfce , kde , gnome ,vs openbox<3
+i3
+---------------------------------------------------------------------------
+dualboot olunca os-prober de ekleniyor .
+*
+*
+*
+------------------------[Kullanıcı Oluşturma]-------------------------------
+
+useradd -m -G wheel -s /bin/bash ebubekir 
+
+--------------------------kaynaklar---------------------------------------------------
+https://wiki.archlinux.org/title/Installation_guide
+https://wiki.archlinux.org/title/General_recommendations
+https://wiki.archlinux.org/title/Dual_boot_with_Windows#UEFI_Secure_Boot
+https://gist.github.com/chriscandy/16899e0d701a05654cb4f79ef2d2d062
